@@ -192,7 +192,7 @@ const AsiaWebmap = () => {
   };
 
   const analyzeRoutes = async () => {
-    const apiKey = 'azXVSHH9210R4naWMN3Yg2VjYqamAsBr0547vAIbktva6Dz8Yk0TIwucZLlUEWnurgECFNehcWT3BlbkFJWq-2L2yw49oJ0JBOHPORmwGoRIZKGzkDutteVJoUO__8xxQDx59yybyCr8O41CR6E1m01vis8A';
+    const apiKey = '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';
     const prompt = `Analyze the following shipping routes and provide 4 solutions:
       1. Lowest cost
       2. Fastest time
