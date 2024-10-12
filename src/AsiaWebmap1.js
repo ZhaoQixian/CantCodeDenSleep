@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 // import { Slider } from "@/components/ui/slider"
 // import { Card, CardHeader, CardContent } from "@/components/ui/card"
 
-
 const Button = ({ children, onClick, disabled, className }) => (
   <button
     onClick={onClick}
@@ -43,7 +42,6 @@ const CardContent = ({ children }) => (
     {children}
   </div>
 );
-
 const cities = [
   { name: 'Tokyo', x: 800, y: 200 },
   { name: 'Shanghai', x: 700, y: 250 },
@@ -63,12 +61,6 @@ const shippingLines = [
 ];
 
 const asiaPath = "M300,100 Q400,50 500,75 T700,100 T850,150 T900,250 T850,350 T750,400 T600,450 T450,475 T300,450 T200,400 T150,300 T200,200 T300,100 Z";
-
-const transportModes = [
-  { name: 'ship', color: 'blue', speed: 20 },
-  { name: 'car', color: 'green', speed: 60 },
-  { name: 'air', color: 'red', speed: 500 },
-];
 
 const AsiaWebmap = () => {
   const [selectedCities, setSelectedCities] = useState([]);
