@@ -1,5 +1,5 @@
 import React from 'react';
-import AsiaWebmap from './AsiaWebmap5';
+import AsiaWebmap from './AsiaWebmap6';
 
 function App() {
   return (
