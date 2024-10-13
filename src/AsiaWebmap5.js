@@ -191,14 +191,33 @@ const AsiaWebmap = () => {
   };
 
   const analyzeRoutes = async () => {
-    const apiKey = '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';
-    const prompt = `Analyze the following shipping routes and provide 4 solutions:
-      1. Lowest cost
-      2. Fastest time
-      3. Most environmentally friendly
-      4. Best overall strategy (balancing cost, time, and environmental impact)
-
-      Current routes: ${JSON.stringify(routes)}`;
+    if (selectedCities.length !== 2) {
+      console.error('You must select exactly two cities to protect.');
+      return;
+    }
+  
+    const protectedCity1 = selectedCities[0];
+    const protectedCity2 = selectedCities[1];
+  
+      // Filter routes to exclude destroyed cities or routes
+      const filteredRoutes = routes.filter(route => {
+        const routeInvolvesDestroyedCity = destroyedItems.some(item => 
+          item.type === 'city' && (route.Start === item.name || route.End === item.name)
+        );
+        const routeIsDestroyed = destroyedItems.some(item => 
+          item.type === 'route' && route.Start === item.Start && route.End === item.End && route.Mode === item.Mode
+        );
+        return !routeInvolvesDestroyedCity && !routeIsDestroyed;
+      });
+      const apiKey = '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';
+      const prompt = `A city or route was destroyed. Now, simulate transporting between ${protectedCity1} and ${protectedCity2}.
+      Based on the remaining routes, provide 4 solutions:
+      1. The lowest cost route.
+      2. The fastest route.
+      3. The most environmentally friendly route.
+      4. The best overall strategy (balancing cost, time, and environmental impact).
+      
+      Remaining routes: ${JSON.stringify(filteredRoutes)}`;
 
     try {
       const response = await axios.post('https://api.openai.com/v1/chat/completions', {
