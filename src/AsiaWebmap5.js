@@ -217,10 +217,9 @@ const AsiaWebmap = () => {
       console.error('You must select exactly two cities to protect.');
       return;
     }
-
-    const protectedCity1 = selectedCities[0];
-    const protectedCity2 = selectedCities[1];
-
+  
+    const [startCity, endCity] = selectedCities;
+  
     // Filter routes to exclude destroyed cities or routes
     const filteredRoutes = routes.filter((route) => {
       const routeInvolvesDestroyedCity = destroyedItems.some(
@@ -237,36 +236,67 @@ const AsiaWebmap = () => {
       );
       return !routeInvolvesDestroyedCity && !routeIsDestroyed;
     });
-
-    const paths = findAllPaths(protectedCity1, protectedCity2, filteredRoutes);
-
-    if (paths.length === 0) {
+  
+    // Find all possible paths from start to end city
+    const findAllPaths = (start, end, routes, path = [], visited = new Set()) => {
+      if (start === end) {
+        return [path];
+      }
+  
+      visited.add(start);
+      let paths = [];
+  
+      for (const route of routes) {
+        if (route.Start === start && !visited.has(route.End)) {
+          const newPaths = findAllPaths(
+            route.End,
+            end,
+            routes,
+            [...path, route],
+            new Set(visited)
+          );
+          paths.push(...newPaths);
+        }
+      }
+  
+      return paths;
+    };
+  
+    const allPaths = findAllPaths(startCity, endCity, filteredRoutes);
+  
+    if (allPaths.length === 0) {
       console.log('No valid routes between the protected cities.');
       setSolutions([]);
       return;
     }
-
-    const apiKey = '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'; // Replace with your actual OpenAI API key
-    const prompt = `We need to transport goods between ${protectedCity1} and ${protectedCity2}. Consider both direct routes and multi-step routes involving intermediate cities. Based on the remaining valid routes, provide 4 structured solutions strictly following this format:
-
-1. Consideration (Cost/Time/Carbon Footprint/Composite)
-2. Route: [City 1 -> City 2 -> ... -> Final City] by [Mode]
-3. Cost: $X
-4. Time: X hours
-5. Carbon Footprint: X/kg
-6. Composite Score: X (balance of cost, time, carbon footprint)
-7. One-line Comment
-
-The route must start from ${protectedCity1} and end at ${protectedCity2}, but you may suggest intermediate stops if needed. Provide the optimal route based on each consideration (Cost, Time, Environment, Composite).
-
-Remaining routes: ${JSON.stringify(filteredRoutes)}
-Possible paths: ${JSON.stringify(paths)}`;
-
+  
+    const apiKey = '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';
+    const prompt = `We need to transport goods from ${startCity} to ${endCity}. Based on the remaining valid routes, provide 4 structured solutions strictly following this format:
+  
+  1. Consideration (Cost/Time/Carbon Footprint/Composite)
+  2. Route: [City 1 -> City 2 -> ... -> Final City] by [Mode1, Mode2, ...]
+  3. Cost: $X
+  4. Time: X hours
+  5. Carbon Footprint: X kg
+  6. Composite Score: X (balance of cost, time, carbon footprint)
+  7. One-line Comment
+  
+  Consider both direct routes (if available) and multi-step routes. For multi-step routes, list all modes used.
+  
+  Valid paths: ${JSON.stringify(allPaths.map(path => ({
+    route: path.map(r => r.Start).concat(path[path.length - 1].End).join(' -> '),
+    modes: path.map(r => r.Mode).join(', '),
+    totalCost: path.reduce((sum, r) => sum + r.Cost, 0),
+    totalTime: path.reduce((sum, r) => sum + r.Time, 0),
+    totalEnvironment: path.reduce((sum, r) => sum + r.Environment, 0)
+  })))}`;
+  
+    // Call OpenAI API to get solutions
     try {
       const response = await axios.post(
         'https://api.openai.com/v1/chat/completions',
         {
-          model: 'gpt-3.5-turbo',
+          model: 'gpt-4-turbo',
           messages: [
             { role: 'system', content: 'You are a helpful assistant.' },
             { role: 'user', content: prompt },
@@ -282,12 +312,8 @@ Possible paths: ${JSON.stringify(paths)}`;
           },
         }
       );
-
-      if (
-        response.data &&
-        response.data.choices &&
-        response.data.choices.length > 0
-      ) {
+  
+      if (response.data && response.data.choices && response.data.choices.length > 0) {
         const gptSolutions = response.data.choices[0].message.content
           .split(/\n\n/)
           .filter(Boolean);
@@ -297,16 +323,10 @@ Possible paths: ${JSON.stringify(paths)}`;
       }
     } catch (error) {
       console.error('Error calling OpenAI API:', error);
-      if (error.response) {
-        console.error('API response:', error.response.data);
-        setGptAnalysis(`Error: ${error.response.data.error.message}`);
-      } else {
-        setGptAnalysis(
-          'Error analyzing routes. Please check your internet connection and try again.'
-        );
-      }
+      setGptAnalysis('Error analyzing routes. Please try again.');
     }
   };
+  
 
   const SolutionBox = ({ solution }) => (
     <div className="bg-white shadow-lg rounded-lg p-4 m-2 w-1/4">
