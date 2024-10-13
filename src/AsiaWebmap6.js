@@ -1,74 +1,65 @@
+// AsiaWebmap.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import initialRoutesData from './routesData';
 import './styles.css';
-import asiaMap from './AsiaMap.jpg';
-<img 
-  src={asiaMap}
-  alt="Map of Asia" 
-  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-/>
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import asiaMap from './AsiaMap1.jpg';
 
-
-
-
-// ... (keep all the existing component definitions)
+// Components
 const Button = ({ children, onClick, disabled, className }) => (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`px-4 py-2 bg-blue-500 text-white rounded ${
-        disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-600'
-      } ${className}`}
-    >
-      {children}
-    </button>
-  );
-  
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className={`px-4 py-2 bg-blue-500 text-white rounded ${
+      disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-600'
+    } ${className}`}
+  >
+    {children}
+  </button>
+);
+
 const Slider = ({ min, max, step, value, onValueChange }) => (
-    <input
-      type="range"
-      min={min}
-      max={max}
-      step={step}
-      value={value}
-      onChange={(e) => onValueChange(parseInt(e.target.value))}
-      className="w-full"
-    />
-  );
-  
+  <input
+    type="range"
+    min={min}
+    max={max}
+    step={step}
+    value={value}
+    onChange={(e) => onValueChange(parseInt(e.target.value))}
+    className="w-full"
+  />
+);
+
 const Card = ({ children, className }) => (
-    <div className={`bg-white shadow-md rounded-lg ${className}`}>{children}</div>
-  );
-  
+  <div className={`bg-white shadow-md rounded-lg ${className}`}>{children}</div>
+);
+
 const CardHeader = ({ children }) => (
-    <div className="px-4 py-2 bg-gray-100 rounded-t-lg font-bold">{children}</div>
-  );
-  
+  <div className="px-4 py-2 bg-gray-100 rounded-t-lg font-bold">{children}</div>
+);
+
 const CardContent = ({ children }) => <div className="p-4">{children}</div>;
 
+// Constants
 const transportModes = [
-    { name: 'Sea', icon: '🚢', color: 'blue', defaultSpeed: 30 },
-    { name: 'Air', icon: '✈️', color: 'green', defaultSpeed: 800 },
-    { name: 'Land', icon: '🚛', color: 'orange', defaultSpeed: 60 },
-  ];
-  
-const asiaPath =
-    'M300,100 Q400,50 500,75 T700,100 T850,150 T900,250 T850,350 T750,400 T600,450 T450,475 T300,450 T200,400 T150,300 T200,200 T300,100 Z';
-
-const initialCities = [
-  { name: 'Tokyo', x: 800, y: 200 },
-  { name: 'Shanghai', x: 750, y: 250 },
-  { name: 'Hong Kong', x: 730, y: 300 },
-  { name: 'Singapore', x: 680, y: 400 },
-  { name: 'Mumbai', x: 450, y: 350 },
-  { name: 'Dubai', x: 350, y: 300 },
+  { name: 'Sea', icon: '🚢', color: 'blue', defaultSpeed: 30 },
+  { name: 'Air', icon: '✈️', color: 'green', defaultSpeed: 800 },
+  { name: 'Land', icon: '🚛', color: 'orange', defaultSpeed: 60 },
 ];
 
-// ... (keep all other constants and the AsiaWebmap component definition)
+const initialCities = [
+  { name: 'Tokyo', x: 820, y: 130 },
+  { name: 'Shanghai', x: 670, y: 210 },
+  { name: 'Hong Kong', x: 620, y: 290 },
+  { name: 'Singapore', x: 545, y: 520 },
+  { name: 'Mumbai', x: 240, y: 350 },
+  { name: 'Dubai', x: 50, y: 270 },
+];
 
+// Main Component
 const AsiaWebmap = () => {
-  // ... (keep all the existing state and function definitions)
+  // State variables
   const [cities, setCities] = useState(initialCities);
   const [routes, setRoutes] = useState(initialRoutesData);
   const [vehiclePositions, setVehiclePositions] = useState({});
@@ -86,7 +77,9 @@ const AsiaWebmap = () => {
   const [gptAnalysis, setGptAnalysis] = useState(null);
   const [destructionMessage, setDestructionMessage] = useState('');
   const [solutions, setSolutions] = useState([]);
+  const [currentSolutionIndex, setCurrentSolutionIndex] = useState(0);
 
+  // Functions
   const simulateAllRoutes = () => {
     setIsSimulating(true);
     setIsStopped(false);
@@ -212,6 +205,34 @@ const AsiaWebmap = () => {
     setSolutions([]);
   };
 
+  const handleSpeedChange = (mode, value) => {
+    setSpeeds((prev) => ({ ...prev, [mode]: value }));
+  };
+
+  const getTransportModeColor = (mode) => {
+    return transportModes.find((m) => m.name === mode)?.color || 'gray';
+  };
+
+  const getTransportModeIcon = (mode) => {
+    return transportModes.find((m) => m.name === mode)?.icon || '❓';
+  };
+
+  const nextSolution = () => {
+    setCurrentSolutionIndex((prevIndex) =>
+      prevIndex < solutions.length - 1 ? prevIndex + 1 : prevIndex
+    );
+  };
+
+  const prevSolution = () => {
+    setCurrentSolutionIndex((prevIndex) =>
+      prevIndex > 0 ? prevIndex - 1 : prevIndex
+    );
+  };
+
+  useEffect(() => {
+    return () => intervals.forEach(clearInterval);
+  }, [intervals]);
+
   const analyzeRoutes = async () => {
     if (selectedCities.length !== 2) {
       console.error('You must select exactly two cities to protect.');
@@ -270,18 +291,44 @@ const AsiaWebmap = () => {
       return;
     }
 
+    
     const apiKey = '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';
-    const prompt = `We need to transport goods from ${startCity} to ${endCity}. Based on the remaining valid routes, provide 4 structured solutions strictly following this format:
+    const prompt = `
+We need to transport goods from ${startCity} to ${endCity}. Based on the remaining valid routes, provide 4 structured solutions strictly following this format, and separate each solution with '---':
 
-1. Consideration (Cost/Time/Carbon Footprint/Composite)
+1. Consideration: [Optimal solution / Cost-efficient / Time-saving / Environmentally friendly]
+
 2. Route: [City 1 -> City 2 -> ... -> Final City] by [Mode1, Mode2, ...]
+
 3. Cost: $X
+
 4. Time: X hours
+
 5. Carbon Footprint: X kg
-6. Composite Score: X (balance of cost, time, carbon footprint)
-7. One-line Comment
+
+6. Evaluation: [One-line comment without mentioning ratios or percentages]
 
 Consider both direct routes (if available) and multi-step routes. For multi-step routes, list all modes used.
+
+The first output must be the optimal solution, balancing cost, time, and environmental impact. The next solution is cost-efficient, the next is time-saving, and the last is environmentally friendly.
+
+**Please do not mention any ratios or percentages in the evaluation.**
+
+**Here is an example of the desired format:**
+
+1. Consideration: Optimal solution
+
+2. Route: [Shanghai -> Singapore] by [Sea]
+
+3. Cost: $550
+
+4. Time: 336 hours
+
+5. Carbon Footprint: 650.2 kg
+
+6. Evaluation: This is the most optimal solution, offering the best balance of cost, time, and carbon footprint.
+
+Please ensure each solution strictly follows the format and uses the data provided. Do not include extra information or deviate from the structure.
 
 Valid paths: ${JSON.stringify(
       allPaths.map((path) => ({
@@ -317,9 +364,12 @@ Valid paths: ${JSON.stringify(
 
       if (response.data && response.data.choices && response.data.choices.length > 0) {
         const gptSolutions = response.data.choices[0].message.content
-          .split(/\n\n/)
-          .filter(Boolean);
+        .split('---')
+        .map((solution) => solution.trim())
+        .filter(Boolean);
+
         setSolutions(gptSolutions);
+        setCurrentSolutionIndex(0); // Reset to the first solution
       } else {
         setGptAnalysis('No analysis received from the API. Please try again.');
       }
@@ -336,36 +386,22 @@ Valid paths: ${JSON.stringify(
       ))}
     </div>
   );
-  
-
-  const handleSpeedChange = (mode, value) => {
-    setSpeeds((prev) => ({ ...prev, [mode]: value }));
-  };
-
-  const getTransportModeColor = (mode) => {
-    return transportModes.find((m) => m.name === mode)?.color || 'gray';
-  };
-
-  const getTransportModeIcon = (mode) => {
-    return transportModes.find((m) => m.name === mode)?.icon || '❓';
-  };
-
-  useEffect(() => {
-    return () => intervals.forEach(clearInterval);
-  }, [intervals]);
 
   return (
     <div className="container">
-      <div className="map-container" style={{ position: 'relative', width: '100%', height: '600px' }}>
-        <img 
-          src={asiaMap} 
-          alt="Map of Asia" 
+      <div
+        className="map-container"
+        style={{ position: 'relative', width: '100%', height: '600px' }}
+      >
+        <img
+          src={asiaMap}
+          alt="Map of Asia"
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
-        <svg 
-          width="100%" 
-          height="100%" 
-          viewBox="0 0 1000 600" 
+        <svg
+          width="100%"
+          height="100%"
+          viewBox="0 0 1000 600"
           style={{ position: 'absolute', top: 0, left: 0 }}
         >
           {routes.map((route) => {
@@ -426,7 +462,14 @@ Valid paths: ${JSON.stringify(
                 r="5"
                 fill={selectedCities.includes(city.name) ? 'red' : 'black'}
               />
-              <text x={city.x + 10} y={city.y - 10} fontSize="12" fill="black" stroke="white" strokeWidth="0.5">
+              <text
+                x={city.x + 10}
+                y={city.y - 10}
+                fontSize="12"
+                fill="black"
+                stroke="black"
+                strokeWidth="0.5"
+              >
                 {city.name}
               </text>
             </g>
@@ -447,9 +490,9 @@ Valid paths: ${JSON.stringify(
           ))}
         </svg>
       </div>
-<div className="controls-container">
+      <div className="controls-container">
         <Card className="mb-4">
-          <CardHeader>Shipping Controls</CardHeader>
+          <CardHeader>Shipping Controllers</CardHeader>
           <CardContent>
             <div className="button-group">
               <Button
@@ -486,7 +529,7 @@ Valid paths: ${JSON.stringify(
 
             {isCrisisMode && !destroyType && (
               <div className="mb-4">
-                <p>Select two cities to protect:</p>
+                <p>Select start point and end point:</p>
                 <p>{selectedCities.join(', ')}</p>
                 {selectedCities.length === 2 && (
                   <>
@@ -560,9 +603,18 @@ Valid paths: ${JSON.stringify(
         {/* Solutions Display */}
         {solutions.length > 0 && (
           <div className="solutions-container">
-            {solutions.map((solution, index) => (
-              <SolutionBox key={index} solution={solution} />
-            ))}
+            <SolutionBox solution={solutions[currentSolutionIndex]} />
+            <div className="navigation-buttons">
+              <Button onClick={prevSolution} disabled={currentSolutionIndex === 0}>
+                <ChevronLeft />
+              </Button>
+              <Button
+                onClick={nextSolution}
+                disabled={currentSolutionIndex === solutions.length - 1}
+              >
+                <ChevronRight />
+              </Button>
+            </div>
           </div>
         )}
       </div>
