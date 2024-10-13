@@ -2,6 +2,15 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import initialRoutesData from './routesData';
 import './styles.css';
+import asiaMap from './AsiaMap.jpg';
+<img 
+  src={asiaMap}
+  alt="Map of Asia" 
+  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+/>
+
+
+
 
 // ... (keep all the existing component definitions)
 const Button = ({ children, onClick, disabled, className }) => (
@@ -349,7 +358,7 @@ Valid paths: ${JSON.stringify(
     <div className="container">
       <div className="map-container" style={{ position: 'relative', width: '100%', height: '600px' }}>
         <img 
-          src="/Users/tangyutong/Documents/GitHub/CantCodeDenSleep/src/AsiaMap.jpg" 
+          src={asiaMap} 
           alt="Map of Asia" 
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
