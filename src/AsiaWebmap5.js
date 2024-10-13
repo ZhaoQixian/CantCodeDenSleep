@@ -249,12 +249,12 @@ const AsiaWebmap = () => {
     const apiKey = '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'; // Replace with your actual OpenAI API key
     const prompt = `We need to transport goods between ${protectedCity1} and ${protectedCity2}. Consider both direct routes and multi-step routes involving intermediate cities. Based on the remaining valid routes, provide 4 structured solutions strictly following this format:
 
-1. Consideration (Cost/Time/Environment/Composite)
+1. Consideration (Cost/Time/Carbon Footprint/Composite)
 2. Route: [City 1 -> City 2 -> ... -> Final City] by [Mode]
 3. Cost: $X
 4. Time: X hours
-5. Environment: X score
-6. Composite Score: X (balance of cost, time, environment)
+5. Carbon Footprint: X/kg
+6. Composite Score: X (balance of cost, time, carbon footprint)
 7. One-line Comment
 
 The route must start from ${protectedCity1} and end at ${protectedCity2}, but you may suggest intermediate stops if needed. Provide the optimal route based on each consideration (Cost, Time, Environment, Composite).
