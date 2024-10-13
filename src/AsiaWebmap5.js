@@ -51,21 +51,21 @@ const initialCities = [
 ];
 
 const initialRoutesData = [
-  {"Start":"Shanghai","End":"Hong Kong","Mode":"Sea","Cost":358,"Time":72,"Environment":50},
-  {"Start":"Shanghai","End":"Hong Kong","Mode":"Air","Cost":645,"Time":8,"Environment":80},
-  {"Start":"Shanghai","End":"Hong Kong","Mode":"Land","Cost":300,"Time":48,"Environment":40},
-  {"Start":"Shanghai","End":"Singapore","Mode":"Sea","Cost":550,"Time":336,"Environment":60},
-  {"Start":"Shanghai","End":"Singapore","Mode":"Air","Cost":990,"Time":10,"Environment":85},
-  {"Start":"Hong Kong","End":"Singapore","Mode":"Sea","Cost":2038,"Time":312,"Environment":55},
-  {"Start":"Hong Kong","End":"Singapore","Mode":"Air","Cost":3669,"Time":7,"Environment":88},
-  {"Start":"Shanghai","End":"Tokyo","Mode":"Sea","Cost":700,"Time":240,"Environment":65},
-  {"Start":"Shanghai","End":"Tokyo","Mode":"Air","Cost":1100,"Time":12,"Environment":90},
-  {"Start":"Tokyo","End":"Singapore","Mode":"Sea","Cost":2100,"Time":320,"Environment":60},
-  {"Start":"Tokyo","End":"Singapore","Mode":"Air","Cost":3800,"Time":9,"Environment":92},
-  {"Start":"Tokyo","End":"Hong Kong","Mode":"Sea","Cost":1500,"Time":180,"Environment":70},
-  {"Start":"Tokyo","End":"Hong Kong","Mode":"Air","Cost":2000,"Time":6,"Environment":85},
-  {"Start":"Singapore","End":"Mumbai","Mode":"Sea","Cost":2500,"Time":400,"Environment":70},
-  {"Start":"Mumbai","End":"Dubai","Mode":"Air","Cost":3000,"Time":800,"Environment":75}
+  { "Start": "Shanghai", "End": "Hong Kong", "Mode": "Sea", "Cost": 358, "Time": 72, "Environment": 50 },
+  { "Start": "Shanghai", "End": "Hong Kong", "Mode": "Air", "Cost": 645, "Time": 8, "Environment": 80 },
+  { "Start": "Shanghai", "End": "Hong Kong", "Mode": "Land", "Cost": 300, "Time": 48, "Environment": 40 },
+  { "Start": "Shanghai", "End": "Singapore", "Mode": "Sea", "Cost": 550, "Time": 336, "Environment": 60 },
+  { "Start": "Shanghai", "End": "Singapore", "Mode": "Air", "Cost": 990, "Time": 10, "Environment": 85 },
+  { "Start": "Hong Kong", "End": "Singapore", "Mode": "Sea", "Cost": 2038, "Time": 312, "Environment": 55 },
+  { "Start": "Hong Kong", "End": "Singapore", "Mode": "Air", "Cost": 3669, "Time": 7, "Environment": 88 },
+  { "Start": "Shanghai", "End": "Tokyo", "Mode": "Sea", "Cost": 700, "Time": 240, "Environment": 65 },
+  { "Start": "Shanghai", "End": "Tokyo", "Mode": "Air", "Cost": 1100, "Time": 12, "Environment": 90 },
+  { "Start": "Tokyo", "End": "Singapore", "Mode": "Sea", "Cost": 2100, "Time": 320, "Environment": 60 },
+  { "Start": "Tokyo", "End": "Singapore", "Mode": "Air", "Cost": 3800, "Time": 9, "Environment": 92 },
+  { "Start": "Tokyo", "End": "Hong Kong", "Mode": "Sea", "Cost": 1500, "Time": 180, "Environment": 70 },
+  { "Start": "Tokyo", "End": "Hong Kong", "Mode": "Air", "Cost": 2000, "Time": 6, "Environment": 85 },
+  { "Start": "Singapore", "End": "Mumbai", "Mode": "Sea", "Cost": 2500, "Time": 400, "Environment": 70 },
+  { "Start": "Mumbai", "End": "Dubai", "Mode": "Air", "Cost": 3000, "Time": 800, "Environment": 75 }
 ];
 
 const transportModes = [
@@ -92,9 +92,9 @@ const AsiaWebmap = () => {
   const [selectedCities, setSelectedCities] = useState([]);
   const [destroyedItems, setDestroyedItems] = useState([]);
   const [gptAnalysis, setGptAnalysis] = useState(null);
+  const [destructionMessage, setDestructionMessage] = useState('');
 
   const simulateAllRoutes = () => {
-    // ... (keep existing simulation logic)
     setIsSimulating(true);
     setIsStopped(false);
     setVehiclePositions({});
@@ -140,15 +140,12 @@ const AsiaWebmap = () => {
   };
 
   const stopSimulation = () => {
-    // ... (keep existing stop logic)
     setIsStopped(true);
     setIsSimulating(false);
     intervals.forEach(clearInterval);
-  ;
   };
 
   const restartSimulation = () => {
-    // ... (keep existing restart logic)
     intervals.forEach(clearInterval);
     setVehiclePositions({});
     setShippingTimes({});
@@ -173,11 +170,13 @@ const AsiaWebmap = () => {
       setCities(cities.filter(city => city.name !== item));
       setRoutes(routes.filter(route => route.Start !== item && route.End !== item));
       setDestroyedItems([...destroyedItems, { type: 'city', name: item }]);
+      setDestructionMessage(`Simulation of transport involving the city of ${item} is destroyed.`);
     } else if (destroyType === 'route') {
-      setRoutes(routes.filter(route => 
+      setRoutes(routes.filter(route =>
         !(route.Start === item.Start && route.End === item.End && route.Mode === item.Mode)
       ));
       setDestroyedItems([...destroyedItems, { type: 'route', ...item }]);
+      setDestructionMessage(`Simulation of the ${item.Mode} transport between ${item.Start} and ${item.End} is destroyed.`);
     }
     setIsCrisisMode(false);
     setDestroyType(null);
@@ -201,39 +200,37 @@ const AsiaWebmap = () => {
 
       Current routes: ${JSON.stringify(routes)}`;
 
-      try {
-        const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-          model: 'gpt-3.5-turbo',  // Update to a newer model
-          messages: [
-            { role: 'system', content: 'You are a helpful assistant.' },  // Optional: system message
-            { role: 'user', content: prompt }  // User's prompt
-          ],
-          max_tokens: 500,
-          n: 1,
-          temperature: 0.7,
-        }, {
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-          },
-        });
-      
-        // Check response and set analysis
-        if (response.data && response.data.choices && response.data.choices.length > 0) {
-          setGptAnalysis(response.data.choices[0].message.content);
-        } else {
-          setGptAnalysis('No analysis received from the API. Please try again.');
-        }
-      } catch (error) {
-        console.error('Error calling OpenAI API:', error);
-        if (error.response) {
-          console.error('API response:', error.response.data);
-          setGptAnalysis(`Error: ${error.response.data.error.message}`);
-        } else {
-          setGptAnalysis('Error analyzing routes. Please check your internet connection and try again.');
-        }
+    try {
+      const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+        model: 'gpt-3.5-turbo',
+        messages: [
+          { role: 'system', content: 'You are a helpful assistant.' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 500,
+        n: 1,
+        temperature: 0.7,
+      }, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.data && response.data.choices && response.data.choices.length > 0) {
+        setGptAnalysis(response.data.choices[0].message.content);
+      } else {
+        setGptAnalysis('No analysis received from the API. Please try again.');
       }
-      
+    } catch (error) {
+      console.error('Error calling OpenAI API:', error);
+      if (error.response) {
+        console.error('API response:', error.response.data);
+        setGptAnalysis(`Error: ${error.response.data.error.message}`);
+      } else {
+        setGptAnalysis('Error analyzing routes. Please check your internet connection and try again.');
+      }
+    }
   };
 
   const handleSpeedChange = (mode, value) => {
@@ -284,16 +281,16 @@ const AsiaWebmap = () => {
         })}
 
         {cities.map((city, index) => (
-          <g key={index} 
-             onClick={() => isCrisisMode ? 
-               (destroyType === 'city' && !selectedCities.includes(city.name) ? destroyItem(city.name) : selectCity(city.name)) : 
-               null}
-             style={{ cursor: isCrisisMode ? 'pointer' : 'default' }}>
-            <circle 
-              cx={city.x} 
-              cy={city.y} 
-              r="5" 
-              fill={selectedCities.includes(city.name) ? 'red' : 'gray'} 
+          <g key={index}
+            onClick={() => isCrisisMode ?
+              (destroyType === 'city' && !selectedCities.includes(city.name) ? destroyItem(city.name) : selectCity(city.name)) :
+              null}
+            style={{ cursor: isCrisisMode ? 'pointer' : 'default' }}>
+            <circle
+              cx={city.x}
+              cy={city.y}
+              r="5"
+              fill={selectedCities.includes(city.name) ? 'red' : 'gray'}
             />
             <text x={city.x + 10} y={city.y - 10} fontSize="12" fill="black">
               {city.name}
@@ -338,6 +335,7 @@ const AsiaWebmap = () => {
               <p>{selectedCities.join(', ')}</p>
               {selectedCities.length === 2 && (
                 <>
+                  <p>Selected cities for protection: {selectedCities[0]} and {selectedCities[1]}</p>
                   <Button onClick={() => setDestroyType('city')} className="mr-2">Destroy City</Button>
                   <Button onClick={() => setDestroyType('route')}>Destroy Route</Button>
                 </>
@@ -379,6 +377,12 @@ const AsiaWebmap = () => {
             <div className="mt-4">
               <h3 className="font-bold">GPT Analysis:</h3>
               <p>{gptAnalysis}</p>
+            </div>
+          )}
+
+          {destructionMessage && (
+            <div className="mt-4 p-4 bg-red-100 text-red-600 rounded-lg">
+              <p>{destructionMessage}</p>
             </div>
           )}
         </CardContent>
