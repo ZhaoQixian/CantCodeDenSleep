@@ -85,7 +85,7 @@ const AsiaWebmap = () => {
     const newIntervals = currentRoutes.map((route) => {
       const fromCity = cities.find((city) => city.name === route.Start);
       const toCity = cities.find((city) => city.name === route.End);
-      const distance = route.Cost; // Using Cost as distance for simplicity
+      const distance = route.Cost;
       const speed = speeds[route.Mode];
       const totalTime = distance / speed;
       let elapsedTime = 0;
@@ -323,7 +323,6 @@ Valid paths: ${JSON.stringify(
       ))}
     </div>
   );
-  
   
 
   const handleSpeedChange = (mode, value) => {
