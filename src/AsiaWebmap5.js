@@ -201,34 +201,39 @@ const AsiaWebmap = () => {
 
       Current routes: ${JSON.stringify(routes)}`;
 
-    try {
-      const response = await axios.post('https://api.openai.com/v1/engines/text-davinci-002/completions', {
-        prompt: prompt,
-        max_tokens: 500,
-        n: 1,
-        stop: null,
-        temperature: 0.7,
-      }, {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.data && response.data.choices && response.data.choices.length > 0) {
-        setGptAnalysis(response.data.choices[0].text);
-      } else {
-        setGptAnalysis('No analysis received from the API. Please try again.');
+      try {
+        const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+          model: 'gpt-3.5-turbo',  // Update to a newer model
+          messages: [
+            { role: 'system', content: 'You are a helpful assistant.' },  // Optional: system message
+            { role: 'user', content: prompt }  // User's prompt
+          ],
+          max_tokens: 500,
+          n: 1,
+          temperature: 0.7,
+        }, {
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      
+        // Check response and set analysis
+        if (response.data && response.data.choices && response.data.choices.length > 0) {
+          setGptAnalysis(response.data.choices[0].message.content);
+        } else {
+          setGptAnalysis('No analysis received from the API. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error calling OpenAI API:', error);
+        if (error.response) {
+          console.error('API response:', error.response.data);
+          setGptAnalysis(`Error: ${error.response.data.error.message}`);
+        } else {
+          setGptAnalysis('Error analyzing routes. Please check your internet connection and try again.');
+        }
       }
-    } catch (error) {
-      console.error('Error calling OpenAI API:', error);
-      if (error.response) {
-        console.error('API response:', error.response.data);
-        setGptAnalysis(`Error: ${error.response.data.error.message}`);
-      } else {
-        setGptAnalysis('Error analyzing routes. Please check your internet connection and try again.');
-      }
-    }
+      
   };
 
   const handleSpeedChange = (mode, value) => {
