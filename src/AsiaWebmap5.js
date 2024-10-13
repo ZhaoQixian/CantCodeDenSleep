@@ -172,16 +172,19 @@ const AsiaWebmap = () => {
       setDestroyedItems([...destroyedItems, { type: 'city', name: item }]);
       setDestructionMessage(`Simulation of transport involving the city of ${item} is destroyed.`);
     } else if (destroyType === 'route') {
-      setRoutes(routes.filter(route =>
+      setRoutes(routes.filter(route => 
         !(route.Start === item.Start && route.End === item.End && route.Mode === item.Mode)
       ));
-      setDestroyedItems([...destroyedItems, { type: 'route', ...item }]);
+      setDestroyedItems([...destroyedItems, { type: 'route', ...item }]); // Mark the route as destroyed
       setDestructionMessage(`Simulation of the ${item.Mode} transport between ${item.Start} and ${item.End} is destroyed.`);
+      console.log("Destroyed Routes: ", [...destroyedItems, { type: 'route', ...item }]); // Debugging line
     }
     setIsCrisisMode(false);
     setDestroyType(null);
     await analyzeRoutes();
   };
+  
+  
 
   const restoreAll = () => {
     setCities(initialCities);
@@ -199,18 +202,21 @@ const AsiaWebmap = () => {
     const protectedCity1 = selectedCities[0];
     const protectedCity2 = selectedCities[1];
   
-      // Filter routes to exclude destroyed cities or routes
-      const filteredRoutes = routes.filter(route => {
-        const routeInvolvesDestroyedCity = destroyedItems.some(item => 
-          item.type === 'city' && (route.Start === item.name || route.End === item.name)
-        );
-        const routeIsDestroyed = destroyedItems.some(item => 
-          item.type === 'route' && route.Start === item.Start && route.End === item.End && route.Mode === item.Mode
-        );
-        return !routeInvolvesDestroyedCity && !routeIsDestroyed;
-      });
-      const apiKey = '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';
-      const prompt = `A city or route was destroyed. Now, simulate transporting between ${protectedCity1} and ${protectedCity2}.
+    // Filter routes to exclude destroyed cities or routes
+    const filteredRoutes = routes.filter(route => {
+      const routeInvolvesDestroyedCity = destroyedItems.some(item => 
+        item.type === 'city' && (route.Start === item.name || route.End === item.name)
+      );
+      const routeIsDestroyed = destroyedItems.some(item => 
+        item.type === 'route' && route.Start === item.Start && route.End === item.End && route.Mode === item.Mode
+      );
+      return !routeInvolvesDestroyedCity && !routeIsDestroyed;
+    });
+  
+    console.log("Remaining Routes: ", filteredRoutes); // Debugging line
+  
+    const apiKey = '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'; // Replace with your actual OpenAI API key
+    const prompt = `A city or route was destroyed. Now, simulate transporting between ${protectedCity1} and ${protectedCity2}.
       Based on the remaining routes, provide 4 solutions:
       1. The lowest cost route.
       2. The fastest route.
@@ -218,7 +224,7 @@ const AsiaWebmap = () => {
       4. The best overall strategy (balancing cost, time, and environmental impact).
       
       Remaining routes: ${JSON.stringify(filteredRoutes)}`;
-
+  
     try {
       const response = await axios.post('https://api.openai.com/v1/chat/completions', {
         model: 'gpt-3.5-turbo',
@@ -235,7 +241,7 @@ const AsiaWebmap = () => {
           'Content-Type': 'application/json',
         },
       });
-
+  
       if (response.data && response.data.choices && response.data.choices.length > 0) {
         setGptAnalysis(response.data.choices[0].message.content);
       } else {
@@ -251,6 +257,8 @@ const AsiaWebmap = () => {
       }
     }
   };
+  
+  
 
   const handleSpeedChange = (mode, value) => {
     setSpeeds(prev => ({ ...prev, [mode]: value }));
