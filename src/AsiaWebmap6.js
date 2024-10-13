@@ -292,7 +292,7 @@ const AsiaWebmap = () => {
     }
 
     
-    const apiKey = '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';
+    const apiKey = 'Key in your OpenAI API Key here';
     const prompt = `
 We need to transport goods from ${startCity} to ${endCity}. Based on the remaining valid routes, provide 4 structured solutions strictly following this format, and separate each solution with '---':
 
