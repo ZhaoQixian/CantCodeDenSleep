@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import initialRoutesData from './routesData';
+import './styles.css';
 
 const Button = ({ children, onClick, disabled, className }) => (
   <button
@@ -198,28 +199,14 @@ const AsiaWebmap = () => {
     setSolutions([]);
   };
 
-  const findAllPaths = (start, end, routes, path = [], paths = []) => {
-    const connections = routes.filter((route) => route.Start === start);
-
-    for (const route of connections) {
-      if (route.End === end) {
-        paths.push([...path, route]);
-      } else if (!path.some((r) => r.Start === route.End)) {
-        // Avoid cycles
-        findAllPaths(route.End, end, routes, [...path, route], paths);
-      }
-    }
-    return paths;
-  };
-
   const analyzeRoutes = async () => {
     if (selectedCities.length !== 2) {
       console.error('You must select exactly two cities to protect.');
       return;
     }
-  
+
     const [startCity, endCity] = selectedCities;
-  
+
     // Filter routes to exclude destroyed cities or routes
     const filteredRoutes = routes.filter((route) => {
       const routeInvolvesDestroyedCity = destroyedItems.some(
@@ -236,16 +223,16 @@ const AsiaWebmap = () => {
       );
       return !routeInvolvesDestroyedCity && !routeIsDestroyed;
     });
-  
+
     // Find all possible paths from start to end city
     const findAllPaths = (start, end, routes, path = [], visited = new Set()) => {
       if (start === end) {
         return [path];
       }
-  
+
       visited.add(start);
       let paths = [];
-  
+
       for (const route of routes) {
         if (route.Start === start && !visited.has(route.End)) {
           const newPaths = findAllPaths(
@@ -258,45 +245,47 @@ const AsiaWebmap = () => {
           paths.push(...newPaths);
         }
       }
-  
+
       return paths;
     };
-  
+
     const allPaths = findAllPaths(startCity, endCity, filteredRoutes);
-  
+
     if (allPaths.length === 0) {
       console.log('No valid routes between the protected cities.');
       setSolutions([]);
       return;
     }
-  
+
     const apiKey = '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';
     const prompt = `We need to transport goods from ${startCity} to ${endCity}. Based on the remaining valid routes, provide 4 structured solutions strictly following this format:
-  
-  1. Consideration (Cost/Time/Carbon Footprint/Composite)
-  2. Route: [City 1 -> City 2 -> ... -> Final City] by [Mode1, Mode2, ...]
-  3. Cost: $X
-  4. Time: X hours
-  5. Carbon Footprint: X kg
-  6. Composite Score: X (balance of cost, time, carbon footprint)
-  7. One-line Comment
-  
-  Consider both direct routes (if available) and multi-step routes. For multi-step routes, list all modes used.
-  
-  Valid paths: ${JSON.stringify(allPaths.map(path => ({
-    route: path.map(r => r.Start).concat(path[path.length - 1].End).join(' -> '),
-    modes: path.map(r => r.Mode).join(', '),
-    totalCost: path.reduce((sum, r) => sum + r.Cost, 0),
-    totalTime: path.reduce((sum, r) => sum + r.Time, 0),
-    totalEnvironment: path.reduce((sum, r) => sum + r.Environment, 0)
-  })))}`;
-  
+
+1. Consideration (Cost/Time/Carbon Footprint/Composite)
+2. Route: [City 1 -> City 2 -> ... -> Final City] by [Mode1, Mode2, ...]
+3. Cost: $X
+4. Time: X hours
+5. Carbon Footprint: X kg
+6. Composite Score: X (balance of cost, time, carbon footprint)
+7. One-line Comment
+
+Consider both direct routes (if available) and multi-step routes. For multi-step routes, list all modes used.
+
+Valid paths: ${JSON.stringify(
+      allPaths.map((path) => ({
+        route: path.map((r) => r.Start).concat(path[path.length - 1].End).join(' -> '),
+        modes: path.map((r) => r.Mode).join(', '),
+        totalCost: path.reduce((sum, r) => sum + r.Cost, 0),
+        totalTime: path.reduce((sum, r) => sum + r.Time, 0),
+        totalEnvironment: path.reduce((sum, r) => sum + r.Environment, 0),
+      }))
+    )}`;
+
     // Call OpenAI API to get solutions
     try {
       const response = await axios.post(
         'https://api.openai.com/v1/chat/completions',
         {
-          model: 'gpt-4-turbo',
+          model: 'gpt-4',
           messages: [
             { role: 'system', content: 'You are a helpful assistant.' },
             { role: 'user', content: prompt },
@@ -312,7 +301,7 @@ const AsiaWebmap = () => {
           },
         }
       );
-  
+
       if (response.data && response.data.choices && response.data.choices.length > 0) {
         const gptSolutions = response.data.choices[0].message.content
           .split(/\n\n/)
@@ -326,13 +315,16 @@ const AsiaWebmap = () => {
       setGptAnalysis('Error analyzing routes. Please try again.');
     }
   };
-  
 
   const SolutionBox = ({ solution }) => (
-    <div className="bg-white shadow-lg rounded-lg p-4 m-2 w-1/4">
-      <p>{solution}</p>
+    <div className="solution-box">
+      {solution.split('\n').map((line, index) => (
+        <p key={index}>{line}</p>
+      ))}
     </div>
   );
+  
+  
 
   const handleSpeedChange = (mode, value) => {
     setSpeeds((prev) => ({ ...prev, [mode]: value }));
@@ -351,9 +343,9 @@ const AsiaWebmap = () => {
   }, [intervals]);
 
   return (
-    <div className="flex flex-col">
-      <div className="flex">
-        <svg width="900" height="500" viewBox="0 0 900 500">
+    <div className="container">
+      <div className="map-container">
+        <svg width="100%" height="600" viewBox="0 0 900 500">
           <rect width="900" height="500" fill="#f0f0f0" />
           <path
             d={asiaPath}
@@ -440,11 +432,12 @@ const AsiaWebmap = () => {
             </g>
           ))}
         </svg>
-
-        <Card className="w-80 ml-4">
+      </div>
+      <div className="controls-container">
+        <Card className="mb-4">
           <CardHeader>Shipping Controls</CardHeader>
           <CardContent>
-            <div className="flex flex-wrap space-x-2 mb-4">
+            <div className="button-group">
               <Button
                 onClick={simulateAllRoutes}
                 disabled={isSimulating || isCrisisMode}
@@ -549,16 +542,16 @@ const AsiaWebmap = () => {
             )}
           </CardContent>
         </Card>
-      </div>
 
-      {/* Solutions Display */}
-      {solutions.length > 0 && (
-        <div className="flex flex-wrap mt-4">
-          {solutions.map((solution, index) => (
-            <SolutionBox key={index} solution={solution} />
-          ))}
-        </div>
-      )}
+        {/* Solutions Display */}
+        {solutions.length > 0 && (
+          <div className="solutions-container">
+            {solutions.map((solution, index) => (
+              <SolutionBox key={index} solution={solution} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
