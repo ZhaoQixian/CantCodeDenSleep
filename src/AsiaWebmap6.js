@@ -292,7 +292,7 @@ const AsiaWebmap = () => {
     }
 
     
-    const apiKey = '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';
+    const apiKey = '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';
     const prompt = `
 We need to transport goods from ${startCity} to ${endCity}. Based on the remaining valid routes, provide 4 structured solutions strictly following this format, and separate each solution with '---':
 
