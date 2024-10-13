@@ -71,7 +71,6 @@ const AsiaWebmap = () => {
   const [destroyedItems, setDestroyedItems] = useState([]);
   const [gptAnalysis, setGptAnalysis] = useState(null);
   const [destructionMessage, setDestructionMessage] = useState('');
-
   const [solutions, setSolutions] = useState([]);
 
   const simulateAllRoutes = () => {
@@ -80,7 +79,9 @@ const AsiaWebmap = () => {
     setVehiclePositions({});
     setShippingTimes({});
 
-    const newIntervals = routes.map((route, index) => {
+    const currentRoutes = [...routes];
+
+    const newIntervals = currentRoutes.map((route) => {
       const fromCity = cities.find((city) => city.name === route.Start);
       const toCity = cities.find((city) => city.name === route.End);
       const distance = route.Cost; // Using Cost as distance for simplicity
@@ -140,20 +141,27 @@ const AsiaWebmap = () => {
   };
 
   const selectCity = (cityName) => {
-    if (selectedCities.length < 2) {
+    if (selectedCities.length < 2 && !selectedCities.includes(cityName)) {
       setSelectedCities([...selectedCities, cityName]);
     }
   };
 
-  const destroyItem = async (item) => {
+  const destroyItem = (item) => {
     if (destroyType === 'city' && !selectedCities.includes(item)) {
-      setCities(cities.filter((city) => city.name !== item));
-      setRoutes(routes.filter((route) => route.Start !== item && route.End !== item));
-      setDestroyedItems([...destroyedItems, { type: 'city', name: item }]);
-      setDestructionMessage(`Simulation of transport involving the city of ${item} is destroyed.`);
+      setCities((prevCities) => prevCities.filter((city) => city.name !== item));
+      setRoutes((prevRoutes) =>
+        prevRoutes.filter((route) => route.Start !== item && route.End !== item)
+      );
+      setDestroyedItems((prevDestroyedItems) => [
+        ...prevDestroyedItems,
+        { type: 'city', name: item },
+      ]);
+      setDestructionMessage(
+        `Simulation of transport involving the city of ${item} is destroyed.`
+      );
     } else if (destroyType === 'route') {
-      setRoutes(
-        routes.filter(
+      setRoutes((prevRoutes) =>
+        prevRoutes.filter(
           (route) =>
             !(
               route.Start === item.Start &&
@@ -162,25 +170,46 @@ const AsiaWebmap = () => {
             )
         )
       );
-      setDestroyedItems([...destroyedItems, { type: 'route', ...item }]); // Mark the route as destroyed
+      setDestroyedItems((prevDestroyedItems) => [
+        ...prevDestroyedItems,
+        { type: 'route', ...item },
+      ]);
       setDestructionMessage(
         `Simulation of the ${item.Mode} transport between ${item.Start} and ${item.End} is destroyed.`
       );
-      console.log('Destroyed Routes: ', [
-        ...destroyedItems,
-        { type: 'route', ...item },
-      ]); // Debugging line
     }
     setIsCrisisMode(false);
     setDestroyType(null);
-    await analyzeRoutes();
   };
+
+  useEffect(() => {
+    if (destroyedItems.length > 0 && selectedCities.length === 2) {
+      analyzeRoutes();
+    }
+  }, [destroyedItems, routes, selectedCities]);
 
   const restoreAll = () => {
     setCities(initialCities);
     setRoutes(initialRoutesData);
     setDestroyedItems([]);
     setGptAnalysis(null);
+    setDestructionMessage('');
+    setSelectedCities([]);
+    setSolutions([]);
+  };
+
+  const findAllPaths = (start, end, routes, path = [], paths = []) => {
+    const connections = routes.filter((route) => route.Start === start);
+
+    for (const route of connections) {
+      if (route.End === end) {
+        paths.push([...path, route]);
+      } else if (!path.some((r) => r.Start === route.End)) {
+        // Avoid cycles
+        findAllPaths(route.End, end, routes, [...path, route], paths);
+      }
+    }
+    return paths;
   };
 
   const analyzeRoutes = async () => {
@@ -209,21 +238,29 @@ const AsiaWebmap = () => {
       return !routeInvolvesDestroyedCity && !routeIsDestroyed;
     });
 
-    const apiKey = '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';
-    const prompt = `A city or route was destroyed. Now, simulate transporting between ${protectedCity1} and ${protectedCity2}.
-      Based on the remaining routes, provide 4 structured solutions strictly following this format:
+    const paths = findAllPaths(protectedCity1, protectedCity2, filteredRoutes);
 
-      1. Consideration (Cost/Time/Environment/Composite)
-      2. Route: [City 1 -> City 2] by [Mode]
-      3. Cost: $X
-      4. Time: X hours
-      5. Environment: X score
-      6. Composite Score: X 
-      7. One-line Comment
+    if (paths.length === 0) {
+      console.log('No valid routes between the protected cities.');
+      setSolutions([]);
+      return;
+    }
 
-      Format the response in 4 lists, each representing a solution.
+    const apiKey = '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'; // Replace with your actual OpenAI API key
+    const prompt = `We need to transport goods between ${protectedCity1} and ${protectedCity2}. Consider both direct routes and multi-step routes involving intermediate cities. Based on the remaining valid routes, provide 4 structured solutions strictly following this format:
 
-      Remaining routes: ${JSON.stringify(filteredRoutes)}`;
+1. Consideration (Cost/Time/Environment/Composite)
+2. Route: [City 1 -> City 2 -> ... -> Final City] by [Mode]
+3. Cost: $X
+4. Time: X hours
+5. Environment: X score
+6. Composite Score: X (balance of cost, time, environment)
+7. One-line Comment
+
+The route must start from ${protectedCity1} and end at ${protectedCity2}, but you may suggest intermediate stops if needed. Provide the optimal route based on each consideration (Cost, Time, Environment, Composite).
+
+Remaining routes: ${JSON.stringify(filteredRoutes)}
+Possible paths: ${JSON.stringify(paths)}`;
 
     try {
       const response = await axios.post(
@@ -234,7 +271,7 @@ const AsiaWebmap = () => {
             { role: 'system', content: 'You are a helpful assistant.' },
             { role: 'user', content: prompt },
           ],
-          max_tokens: 500,
+          max_tokens: 1000,
           n: 1,
           temperature: 0.7,
         },
@@ -251,10 +288,9 @@ const AsiaWebmap = () => {
         response.data.choices &&
         response.data.choices.length > 0
       ) {
-        // Assume the solutions come in a single block of text; split them by list items
         const gptSolutions = response.data.choices[0].message.content
           .split(/\n\n/)
-          .filter(Boolean); // Split solutions by empty lines
+          .filter(Boolean);
         setSolutions(gptSolutions);
       } else {
         setGptAnalysis('No analysis received from the API. Please try again.');
@@ -274,7 +310,6 @@ const AsiaWebmap = () => {
 
   const SolutionBox = ({ solution }) => (
     <div className="bg-white shadow-lg rounded-lg p-4 m-2 w-1/4">
-      <div className="font-bold text-lg mb-2">Solution</div>
       <p>{solution}</p>
     </div>
   );
@@ -296,203 +331,209 @@ const AsiaWebmap = () => {
   }, [intervals]);
 
   return (
-    <div className="flex">
-      <svg width="900" height="500" viewBox="0 0 900 500">
-        <rect width="900" height="500" fill="#f0f0f0" />
-        <path
-          d={asiaPath}
-          fill="#e0e0e0"
-          stroke="#a0a0a0"
-          strokeWidth="2"
-        />
+    <div className="flex flex-col">
+      <div className="flex">
+        <svg width="900" height="500" viewBox="0 0 900 500">
+          <rect width="900" height="500" fill="#f0f0f0" />
+          <path
+            d={asiaPath}
+            fill="#e0e0e0"
+            stroke="#a0a0a0"
+            strokeWidth="2"
+          />
 
-        {routes.map((route, index) => {
-          const fromCity = cities.find((city) => city.name === route.Start);
-          const toCity = cities.find((city) => city.name === route.End);
-          if (fromCity && toCity) {
-            const controlPointOffset = {
-              Sea: { x: 0, y: -30 },
-              Air: { x: 30, y: 0 },
-              Land: { x: -30, y: 30 },
-            };
-            const offset = controlPointOffset[route.Mode];
-            return (
-              <path
-                key={index}
-                d={`M${fromCity.x},${fromCity.y} Q${
-                  (fromCity.x + toCity.x) / 2 + offset.x
-                },${(fromCity.y + toCity.y) / 2 + offset.y} ${toCity.x},${
-                  toCity.y
-                }`}
-                stroke={getTransportModeColor(route.Mode)}
-                strokeWidth="2"
-                fill="none"
-                onClick={() =>
-                  isCrisisMode &&
-                  destroyType === 'route' &&
-                  destroyItem(route)
-                }
-                style={{
-                  cursor:
-                    isCrisisMode && destroyType === 'route'
-                      ? 'pointer'
-                      : 'default',
-                }}
-              />
-            );
-          }
-          return null;
-        })}
-
-        {cities.map((city, index) => (
-          <g
-            key={index}
-            onClick={() =>
-              isCrisisMode
-                ? destroyType === 'city' &&
-                  !selectedCities.includes(city.name)
-                  ? destroyItem(city.name)
-                  : selectCity(city.name)
-                : null
+          {routes.map((route) => {
+            const fromCity = cities.find((city) => city.name === route.Start);
+            const toCity = cities.find((city) => city.name === route.End);
+            if (fromCity && toCity) {
+              const controlPointOffset = {
+                Sea: { x: 0, y: -30 },
+                Air: { x: 30, y: 0 },
+                Land: { x: -30, y: 30 },
+              };
+              const offset = controlPointOffset[route.Mode];
+              const key = `${route.Start}-${route.End}-${route.Mode}`;
+              return (
+                <path
+                  key={key}
+                  d={`M${fromCity.x},${fromCity.y} Q${
+                    (fromCity.x + toCity.x) / 2 + offset.x
+                  },${(fromCity.y + toCity.y) / 2 + offset.y} ${toCity.x},${
+                    toCity.y
+                  }`}
+                  stroke={getTransportModeColor(route.Mode)}
+                  strokeWidth="2"
+                  fill="none"
+                  onClick={() =>
+                    isCrisisMode &&
+                    destroyType === 'route' &&
+                    destroyItem(route)
+                  }
+                  style={{
+                    cursor:
+                      isCrisisMode && destroyType === 'route'
+                        ? 'pointer'
+                        : 'default',
+                  }}
+                />
+              );
             }
-            style={{ cursor: isCrisisMode ? 'pointer' : 'default' }}
-          >
-            <circle
-              cx={city.x}
-              cy={city.y}
-              r="5"
-              fill={selectedCities.includes(city.name) ? 'red' : 'gray'}
-            />
-            <text x={city.x + 10} y={city.y - 10} fontSize="12" fill="black">
-              {city.name}
-            </text>
-          </g>
-        ))}
+            return null;
+          })}
 
-        {Object.entries(vehiclePositions).map(([key, position]) => (
-          <g key={key}>
-            <circle
-              cx={position.x}
-              cy={position.y}
-              r="5"
-              fill={getTransportModeColor(position.mode)}
-            />
-            <text x={position.x + 10} y={position.y - 10} fontSize="20">
-              {getTransportModeIcon(position.mode)}
-            </text>
-          </g>
-        ))}
-      </svg>
-
-      <Card className="w-80 ml-4">
-        <CardHeader>Shipping Controls</CardHeader>
-        <CardContent>
-          <div className="flex space-x-2 mb-4">
-            <Button
-              onClick={simulateAllRoutes}
-              disabled={isSimulating || isCrisisMode}
+          {cities.map((city) => (
+            <g
+              key={city.name}
+              onClick={() =>
+                isCrisisMode
+                  ? destroyType === 'city' &&
+                    !selectedCities.includes(city.name)
+                    ? destroyItem(city.name)
+                    : selectCity(city.name)
+                  : null
+              }
+              style={{ cursor: isCrisisMode ? 'pointer' : 'default' }}
             >
-              Start
-            </Button>
-            <Button
-              onClick={stopSimulation}
-              disabled={!isSimulating || isStopped || isCrisisMode}
-            >
-              Stop
-            </Button>
-            <Button
-              onClick={restartSimulation}
-              disabled={(isSimulating && !isStopped) || isCrisisMode}
-            >
-              Restart
-            </Button>
-            <Button
-              onClick={startCrisisSimulation}
-              disabled={isSimulating || isCrisisMode}
-            >
-              Crisis Simulation
-            </Button>
-            <Button onClick={restoreAll} disabled={isSimulating || isCrisisMode}>
-              Restore All
-            </Button>
-          </div>
-
-          {isCrisisMode && !destroyType && (
-            <div className="mb-4">
-              <p>Select two cities to protect:</p>
-              <p>{selectedCities.join(', ')}</p>
-              {selectedCities.length === 2 && (
-                <>
-                  <p>
-                    Selected cities for protection: {selectedCities[0]} and{' '}
-                    {selectedCities[1]}
-                  </p>
-                  <Button
-                    onClick={() => setDestroyType('city')}
-                    className="mr-2"
-                  >
-                    Destroy City
-                  </Button>
-                  <Button onClick={() => setDestroyType('route')}>
-                    Destroy Route
-                  </Button>
-                </>
-              )}
-            </div>
-          )}
-
-          {isCrisisMode && destroyType && (
-            <div className="mb-4">
-              <p>Click on a {destroyType} to destroy it</p>
-              <Button onClick={() => setIsCrisisMode(false)}>Cancel</Button>
-            </div>
-          )}
-
-          {transportModes.map((mode) => (
-            <div key={mode.name} className="mb-2">
-              <div>
-                {mode.icon} {mode.name} Speed:
-              </div>
-              <Slider
-                min={1}
-                max={mode.name === 'Air' ? 1000 : 100}
-                step={1}
-                value={speeds[mode.name]}
-                onValueChange={(value) => handleSpeedChange(mode.name, value)}
+              <circle
+                cx={city.x}
+                cy={city.y}
+                r="5"
+                fill={selectedCities.includes(city.name) ? 'red' : 'gray'}
               />
-              <span>{speeds[mode.name]} km/h</span>
-            </div>
+              <text x={city.x + 10} y={city.y - 10} fontSize="12" fill="black">
+                {city.name}
+              </text>
+            </g>
           ))}
 
-          {(isSimulating || isStopped) && (
-            <div className="mt-4">
-              <h3 className="font-bold">Shipping Times:</h3>
-              {Object.entries(shippingTimes).map(([key, time]) => (
-                <div key={key}>
-                  {key}: {time} hours
+          {Object.entries(vehiclePositions).map(([key, position]) => (
+            <g key={key}>
+              <circle
+                cx={position.x}
+                cy={position.y}
+                r="5"
+                fill={getTransportModeColor(position.mode)}
+              />
+              <text x={position.x + 10} y={position.y - 10} fontSize="20">
+                {getTransportModeIcon(position.mode)}
+              </text>
+            </g>
+          ))}
+        </svg>
+
+        <Card className="w-80 ml-4">
+          <CardHeader>Shipping Controls</CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap space-x-2 mb-4">
+              <Button
+                onClick={simulateAllRoutes}
+                disabled={isSimulating || isCrisisMode}
+              >
+                Start
+              </Button>
+              <Button
+                onClick={stopSimulation}
+                disabled={!isSimulating || isStopped || isCrisisMode}
+              >
+                Stop
+              </Button>
+              <Button
+                onClick={restartSimulation}
+                disabled={(isSimulating && !isStopped) || isCrisisMode}
+              >
+                Restart
+              </Button>
+              <Button
+                onClick={startCrisisSimulation}
+                disabled={isSimulating || isCrisisMode}
+              >
+                Crisis Simulation
+              </Button>
+              <Button
+                onClick={restoreAll}
+                disabled={isSimulating || isCrisisMode}
+              >
+                Restore All
+              </Button>
+            </div>
+
+            {isCrisisMode && !destroyType && (
+              <div className="mb-4">
+                <p>Select two cities to protect:</p>
+                <p>{selectedCities.join(', ')}</p>
+                {selectedCities.length === 2 && (
+                  <>
+                    <p>
+                      Selected cities for protection: {selectedCities[0]} and{' '}
+                      {selectedCities[1]}
+                    </p>
+                    <Button
+                      onClick={() => setDestroyType('city')}
+                      className="mr-2"
+                    >
+                      Destroy City
+                    </Button>
+                    <Button onClick={() => setDestroyType('route')}>
+                      Destroy Route
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {isCrisisMode && destroyType && (
+              <div className="mb-4">
+                <p>Click on a {destroyType} to destroy it</p>
+                <Button onClick={() => setIsCrisisMode(false)}>Cancel</Button>
+              </div>
+            )}
+
+            {transportModes.map((mode) => (
+              <div key={mode.name} className="mb-2">
+                <div>
+                  {mode.icon} {mode.name} Speed:
                 </div>
-              ))}
-            </div>
-          )}
+                <Slider
+                  min={1}
+                  max={mode.name === 'Air' ? 1000 : 100}
+                  step={1}
+                  value={speeds[mode.name]}
+                  onValueChange={(value) => handleSpeedChange(mode.name, value)}
+                />
+                <span>{speeds[mode.name]} km/h</span>
+              </div>
+            ))}
 
-          {gptAnalysis && (
-            <div className="mt-4">
-              <h3 className="font-bold">GPT Analysis:</h3>
-              <p>{gptAnalysis}</p>
-            </div>
-          )}
+            {(isSimulating || isStopped) && (
+              <div className="mt-4">
+                <h3 className="font-bold">Shipping Times:</h3>
+                {Object.entries(shippingTimes).map(([key, time]) => (
+                  <div key={key}>
+                    {key}: {time} hours
+                  </div>
+                ))}
+              </div>
+            )}
 
-          {destructionMessage && (
-            <div className="mt-4 p-4 bg-red-100 text-red-600 rounded-lg">
-              <p>{destructionMessage}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            {gptAnalysis && (
+              <div className="mt-4">
+                <h3 className="font-bold">GPT Analysis:</h3>
+                <p>{gptAnalysis}</p>
+              </div>
+            )}
 
-      {/* Include the Solutions Display Here */}
+            {destructionMessage && (
+              <div className="mt-4 p-4 bg-red-100 text-red-600 rounded-lg">
+                <p>{destructionMessage}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Solutions Display */}
       {solutions.length > 0 && (
-        <div className="flex flex-wrap">
+        <div className="flex flex-wrap mt-4">
           {solutions.map((solution, index) => (
             <SolutionBox key={index} solution={solution} />
           ))}
