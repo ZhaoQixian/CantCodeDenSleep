@@ -235,7 +235,7 @@ const AsiaWebmap = () => {
 
   const analyzeRoutes = async () => {
     if (selectedCities.length !== 2) {
-      console.error('You must select exactly two cities to protect.');
+      console.error('You must select exactly two cities to as start and end point.');
       return;
     }
 
@@ -286,7 +286,7 @@ const AsiaWebmap = () => {
     const allPaths = findAllPaths(startCity, endCity, filteredRoutes);
 
     if (allPaths.length === 0) {
-      console.log('No valid routes between the protected cities.');
+      console.log('No valid routes between the two cities.');
       setSolutions([]);
       return;
     }
@@ -534,7 +534,7 @@ Valid paths: ${JSON.stringify(
                 {selectedCities.length === 2 && (
                   <>
                     <p>
-                      Selected cities for protection: {selectedCities[0]} and{' '}
+                      Simulation of Transportation from  {selectedCities[0]} to{' '}
                       {selectedCities[1]}
                     </p>
                     <Button
