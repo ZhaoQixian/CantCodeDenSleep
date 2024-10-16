@@ -6,6 +6,8 @@ import './styles.css';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import asiaMap from './AsiaMap1.jpg';
 
+const OPENAI_API_KEY = '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';
+
 // Components
 const Button = ({ children, onClick, disabled, className }) => (
   <button
@@ -292,7 +294,7 @@ const AsiaWebmap = () => {
     }
 
     
-    const apiKey = 'Key in your OpenAI API Key here';
+
     const prompt = `
 We need to transport goods from ${startCity} to ${endCity}. Based on the remaining valid routes, provide 4 structured solutions strictly following this format, and separate each solution with '---':
 
@@ -356,7 +358,7 @@ Valid paths: ${JSON.stringify(
         },
         {
           headers: {
-            Authorization: `Bearer ${apiKey}`,
+            Authorization: `Bearer ${OPENAI_API_KEY}`,
             'Content-Type': 'application/json',
           },
         }
