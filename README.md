@@ -1,4 +1,3 @@
-# Generate the README.md content as requested
 # 🚢 **Intermodal Transportation Crisis Simulation** 🚢  
 *Team CantCodeDenSleep*       (Ya we did not sleep last night 
 
