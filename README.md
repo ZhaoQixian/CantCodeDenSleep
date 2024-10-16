@@ -5,6 +5,8 @@
 
 *Presentation Slides available under CantCodeDenSleep/*
 
+Our project is an interactive web application that simulates transportation routes across Asia cities. Users can explore various transport modes, including sea, air, and land, with customizable speed settings. The app visualizes routes between cities, tracks vehicle movements, and calculates shipping times. A crisis simulation feature allows users to "destroy" cities or routes, testing the impact of disruptions. We integrate with OpenAI to provide optimized alternative routes and solutions based on cost, time, and environmental impact. Our project demonstrates real-time data visualization, interactive simulation, and AI-powered analysis for logistics optimization.
+
 ## Quick Start Guide
 
 ### Step 1: Navigate to the Project Directory  
