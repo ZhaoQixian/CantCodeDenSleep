@@ -16,14 +16,22 @@ Launch the terminal:
 - **Mac**: Terminal.
 - **VS Code**: Use the terminal from the top bar.
 
-### Step 3: Install Dependencies  
+
+### Step 3: Key in Open AI API key  
+Go to CantCodeDenSleep/src/AsiaWebmap6/line 9
+
+const OPENAI_API_KEY = 'Key_in_your_OPENAI_API_KEY_here';
+
+Change to your OpenAI API Key
+
+### Step 4: Install Dependencies  
 Run the following command to install the necessary packages:
 
 \`\`\`bash
 npm install
 \`\`\`
 
-### Step 4: Start the Project  
+### Step 5: Start the Project  
 Once the installation is done, run:
 
 \`\`\`bash
