@@ -6,7 +6,8 @@ import './styles.css';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import asiaMap from './AsiaMap1.jpg';
 
-const OPENAI_API_KEY = '***REMOVED***';
+// Read from .env (create .env in the project root with REACT_APP_OPENAI_API_KEY=<your key>)
+const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY;
 
 // Components
 const Button = ({ children, onClick, disabled, className }) => (
